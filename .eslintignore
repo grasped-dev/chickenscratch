@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+coverage/
+*.config.js
+*.config.ts
+.next/
+.nuxt/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port

@@ -1,0 +1,49 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/controllers/*": ["src/controllers/*"],
+      "@/services/*": ["src/services/*"],
+      "@/models/*": ["src/models/*"],
+      "@/middleware/*": ["src/middleware/*"],
+      "@/routes/*": ["src/routes/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/config/*": ["src/config/*"],
+      "@/types/*": ["src/types/*"]
+    },
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests"
+  ],
+  "references": [
+    { "path": "../shared" }
+  ]
+}

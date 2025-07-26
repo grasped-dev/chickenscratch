@@ -1,0 +1,144 @@
+name: Performance Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2 AM
+  workflow_dispatch:
+    inputs:
+      test_duration:
+        description: 'Test duration in minutes'
+        required: false
+        default: '10'
+      concurrent_users:
+        description: 'Number of concurrent users'
+        required: false
+        default: '50'
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: chicken_scratch_perf
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd backend && npm ci
+          cd ../frontend && npm ci
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Build and start application
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+          cd ../backend && npm start &
+          cd ../frontend && npm run preview &
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/chicken_scratch_perf
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: perf-test-secret
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run performance tests
+        run: k6 run tests/performance/load-test.js
+        env:
+          K6_DURATION: ${{ github.event.inputs.test_duration || '10' }}m
+          K6_VUS: ${{ github.event.inputs.concurrent_users || '50' }}
+          API_BASE_URL: http://localhost:3000/api
+          WEB_BASE_URL: http://localhost:5173
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: |
+            performance-results.json
+            performance-summary.html
+
+  lighthouse-audit:
+    name: Lighthouse Performance Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Start frontend server
+        run: cd frontend && npm run preview &
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:5173
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.12.x
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouse-results
+          path: .lighthouseci

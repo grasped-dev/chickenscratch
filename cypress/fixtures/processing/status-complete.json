@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "data": {
+    "status": "completed",
+    "progress": 100,
+    "stages": {
+      "upload": { "status": "completed", "progress": 100 },
+      "ocr": { "status": "completed", "progress": 100 },
+      "textCleaning": { "status": "completed", "progress": 100 },
+      "clustering": { "status": "completed", "progress": 100 },
+      "summary": { "status": "completed", "progress": 100 }
+    },
+    "results": {
+      "clusters": [
+        {
+          "id": "cluster-1",
+          "label": "Action Items",
+          "textBlocks": ["note-1", "note-3"],
+          "confidence": 0.92
+        },
+        {
+          "id": "cluster-2",
+          "label": "Discussion Points",
+          "textBlocks": ["note-2", "note-4"],
+          "confidence": 0.88
+        }
+      ],
+      "summary": {
+        "topThemes": [
+          { "label": "Action Items", "percentage": 60, "noteCount": 2 },
+          { "label": "Discussion Points", "percentage": 40, "noteCount": 2 }
+        ],
+        "overallInsights": "Meeting focused on actionable outcomes with supporting discussion.",
+        "representativeQuotes": [
+          { "theme": "Action Items", "text": "Follow up with client by Friday" },
+          { "theme": "Discussion Points", "text": "Consider alternative approaches" }
+        ]
+      }
+    }
+  }
+}

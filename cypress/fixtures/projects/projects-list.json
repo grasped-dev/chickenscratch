@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "data": {
+    "projects": [
+      {
+        "id": "project-1",
+        "name": "Meeting Notes - Q4 Planning",
+        "description": "Strategic planning session notes",
+        "createdAt": "2024-01-15T10:00:00Z",
+        "updatedAt": "2024-01-15T11:30:00Z",
+        "status": "completed",
+        "imageCount": 5,
+        "summary": {
+          "topThemes": [
+            { "label": "Budget Planning", "percentage": 35 },
+            { "label": "Team Expansion", "percentage": 25 },
+            { "label": "Product Roadmap", "percentage": 40 }
+          ]
+        }
+      },
+      {
+        "id": "project-2",
+        "name": "Workshop Feedback",
+        "description": "User feedback from design workshop",
+        "createdAt": "2024-01-10T14:00:00Z",
+        "updatedAt": "2024-01-10T16:00:00Z",
+        "status": "completed",
+        "imageCount": 8,
+        "summary": {
+          "topThemes": [
+            { "label": "User Experience", "percentage": 45 },
+            { "label": "Feature Requests", "percentage": 30 },
+            { "label": "Bug Reports", "percentage": 25 }
+          ]
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 2,
+      "totalPages": 1
+    }
+  }
+}

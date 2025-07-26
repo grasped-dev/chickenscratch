@@ -1,0 +1,360 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  POSTGRES_VERSION: '15'
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+          cd ../shared && npm ci
+
+      - name: Lint frontend
+        run: cd frontend && npm run lint
+
+      - name: Lint backend
+        run: cd backend && npm run lint
+
+      - name: Check TypeScript types
+        run: |
+          cd frontend && npx tsc --noEmit
+          cd ../backend && npx tsc --noEmit
+          cd ../shared && npx tsc --noEmit
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: chicken_scratch_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+          cd ../shared && npm ci
+
+      - name: Run database migrations
+        run: cd backend && npm run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/chicken_scratch_test
+
+      - name: Run backend unit tests
+        run: cd backend && npm run test
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/chicken_scratch_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+
+      - name: Run frontend unit tests
+        run: cd frontend && npm run test
+
+      - name: Upload backend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: chicken_scratch_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+          cd ../shared && npm ci
+
+      - name: Run database migrations
+        run: cd backend && npm run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/chicken_scratch_test
+
+      - name: Run integration tests
+        run: cd backend && npm run test:integration
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/chicken_scratch_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: chicken_scratch_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+          cd ../shared && npm ci
+
+      - name: Build applications
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Run database migrations
+        run: cd backend && npm run db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/chicken_scratch_test
+
+      - name: Start backend server
+        run: cd backend && npm start &
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/chicken_scratch_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+
+      - name: Start frontend server
+        run: cd frontend && npm run preview &
+        env:
+          PORT: 5173
+
+      - name: Wait for servers to start
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run Cypress tests
+        run: cd frontend && npm run test:e2e
+        env:
+          CYPRESS_baseUrl: http://localhost:5173
+          CYPRESS_apiUrl: http://localhost:3000/api
+
+      - name: Upload Cypress screenshots
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: frontend/cypress/screenshots
+
+      - name: Upload Cypress videos
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress-videos
+          path: frontend/cypress/videos
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+          cd ../shared && npm ci
+
+      - name: Run npm audit
+        run: |
+          cd frontend && npm audit --audit-level=high
+          cd ../backend && npm audit --audit-level=high
+          cd ../shared && npm audit --audit-level=high
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, integration-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+          cd ../shared && npm ci
+
+      - name: Build shared package
+        run: cd shared && npm run build
+
+      - name: Build backend
+        run: cd backend && npm run build
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Build Docker images
+        run: |
+          docker build -t chicken-scratch-backend ./backend
+          docker build -t chicken-scratch-frontend ./frontend
+
+      - name: Save Docker images
+        run: |
+          docker save chicken-scratch-backend | gzip > backend-image.tar.gz
+          docker save chicken-scratch-frontend | gzip > frontend-image.tar.gz
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-images
+          path: |
+            backend-image.tar.gz
+            frontend-image.tar.gz
+          retention-days: 7

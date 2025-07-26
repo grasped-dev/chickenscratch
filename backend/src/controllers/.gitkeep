@@ -1,0 +1,2 @@
+# This directory will contain Express route handlers
+# Controllers handle HTTP requests/responses with minimal business logic

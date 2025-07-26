@@ -1,0 +1,54 @@
+{
+  "name": "chicken-scratch",
+  "version": "1.0.0",
+  "description": "Transform physical notes into actionable digital insights",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build": "npm run build --workspace=shared && npm run build --workspace=frontend && npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "test": "npm run test --workspaces",
+    "test:frontend": "npm run test --workspace=frontend",
+    "test:backend": "npm run test --workspace=backend",
+    "test:e2e": "npm run test:e2e --workspace=frontend",
+    "test:integration": "npm run test:integration --workspace=backend",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
+    "test:unit": "npm run test --workspaces",
+    "test:performance": "k6 run tests/performance/load-test.js",
+    "test:accessibility": "npm run test:e2e --workspace=frontend -- --spec \"cypress/e2e/accessibility.cy.ts\"",
+    "test:cross-browser": "npm run test:e2e --workspace=frontend",
+    "test:mobile": "npm run test:e2e --workspace=frontend -- --spec \"cypress/e2e/mobile-device-testing.cy.ts\"",
+    "test:uat": "npm run test:e2e --workspace=frontend -- --spec \"cypress/e2e/uat-*.cy.ts\"",
+    "test:coverage": "npm run test --workspace=backend -- --coverage && npm run test --workspace=frontend -- --coverage",
+    "test:visual": "npm run test:e2e --workspace=frontend -- --spec \"cypress/e2e/visual-regression.cy.ts\"",
+    "test:pwa": "npm run test:e2e --workspace=frontend -- --config baseUrl=http://localhost:5173",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "setup": "npm install && npm run build --workspace=shared",
+    "clean": "npm run clean --workspaces && rm -rf node_modules",
+    "clean:workspaces": "rm -rf */node_modules */dist"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.1.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "eslint": "^8.54.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

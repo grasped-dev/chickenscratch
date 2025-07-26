@@ -1,0 +1,370 @@
+name: Cross-Browser Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 4 * * *'  # Run daily at 4 AM
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  chrome-tests:
+    name: Chrome Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Build applications
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Start test servers
+        run: |
+          cd backend && npm start &
+          cd frontend && npm run preview &
+        env:
+          NODE_ENV: test
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run Chrome tests
+        run: cd frontend && npx cypress run --browser chrome
+        env:
+          CYPRESS_baseUrl: http://localhost:5173
+
+      - name: Upload Chrome test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: chrome-test-results
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+
+  firefox-tests:
+    name: Firefox Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Install Firefox
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y firefox
+
+      - name: Build applications
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Start test servers
+        run: |
+          cd backend && npm start &
+          cd frontend && npm run preview &
+        env:
+          NODE_ENV: test
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run Firefox tests
+        run: cd frontend && npx cypress run --browser firefox
+        env:
+          CYPRESS_baseUrl: http://localhost:5173
+
+      - name: Upload Firefox test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: firefox-test-results
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+
+  edge-tests:
+    name: Edge Tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Build applications
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Start test servers
+        run: |
+          cd backend && start /b npm start
+          cd frontend && start /b npm run preview
+        env:
+          NODE_ENV: test
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run Edge tests
+        run: cd frontend && npx cypress run --browser edge
+        env:
+          CYPRESS_baseUrl: http://localhost:5173
+
+      - name: Upload Edge test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: edge-test-results
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+
+  safari-tests:
+    name: Safari Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Build applications
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Start test servers
+        run: |
+          cd backend && npm start &
+          cd frontend && npm run preview &
+        env:
+          NODE_ENV: test
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run Safari tests
+        run: |
+          # Enable Safari WebDriver
+          sudo safaridriver --enable
+          cd frontend && npx cypress run --browser safari
+        env:
+          CYPRESS_baseUrl: http://localhost:5173
+
+      - name: Upload Safari test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: safari-test-results
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+
+  mobile-tests:
+    name: Mobile Device Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        device: [
+          'iphone-x',
+          'iphone-se2',
+          'ipad-2',
+          'samsung-galaxy-s10',
+          'samsung-galaxy-tab-s4'
+        ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Build applications
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Start test servers
+        run: |
+          cd backend && npm start &
+          cd frontend && npm run preview &
+        env:
+          NODE_ENV: test
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run mobile tests
+        run: |
+          cd frontend && npx cypress run \
+            --config viewportWidth=375,viewportHeight=667 \
+            --env device=${{ matrix.device }}
+        env:
+          CYPRESS_baseUrl: http://localhost:5173
+
+      - name: Upload mobile test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: mobile-${{ matrix.device }}-test-results
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+
+  browserstack-tests:
+    name: BrowserStack Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Install BrowserStack CLI
+        run: npm install -g browserstack-cypress-cli
+
+      - name: Run BrowserStack tests
+        run: |
+          cd frontend
+          browserstack-cypress run --sync
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+  visual-regression-tests:
+    name: Visual Regression Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Build applications
+        run: |
+          cd shared && npm run build
+          cd ../backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Start test servers
+        run: |
+          cd backend && npm start &
+          cd frontend && npm run preview &
+        env:
+          NODE_ENV: test
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health
+          npx wait-on http://localhost:5173
+
+      - name: Run visual regression tests
+        run: |
+          cd frontend
+          npx cypress run --spec "cypress/e2e/visual-regression.cy.ts"
+        env:
+          CYPRESS_baseUrl: http://localhost:5173
+
+      - name: Upload visual diff artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: visual-regression-diffs
+          path: frontend/cypress/screenshots/visual-regression.cy.ts

@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user-123",
+      "email": "test@example.com",
+      "name": "Test User"
+    },
+    "token": "jwt-token-123",
+    "refreshToken": "refresh-token-123"
+  }
+}

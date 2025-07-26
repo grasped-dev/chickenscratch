@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "data": {
+    "uploadId": "upload-123",
+    "fileIds": ["file-1", "file-2"],
+    "status": "uploaded",
+    "projectId": "project-new-123"
+  }
+}
